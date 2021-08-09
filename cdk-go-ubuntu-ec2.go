@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/aws/aws-cdk-go/awscdk"
-	"github.com/aws/aws-cdk-go/awscdk/awssns"
+	"github.com/aws/aws-cdk-go/awscdk/awsec2"
 	"github.com/aws/constructs-go/constructs/v3"
 	"github.com/aws/jsii-runtime-go"
 )
@@ -18,12 +18,52 @@ func NewCdkGoUbuntuEc2Stack(scope constructs.Construct, id string, props *CdkGoU
 	}
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
-	// The code that defines your stack goes here
+	imageMap := make(map[string]*string)
 
-	// as an example, here's how you would define an AWS SNS topic:
-	awssns.NewTopic(stack, jsii.String("MyTopic"), &awssns.TopicProps{
-		DisplayName: jsii.String("MyCoolTopic"),
-	})
+	var ubuntu = "ami-019212a8baeffb0fa"
+
+	imageMap["us-east-1"] = jsii.String(ubuntu)
+	
+	var script = "apt-get update -y \n " +
+		"apt-get install -y git awscli ec2-instance-connect \n" +
+		"until git clone https://github.com/aws-quickstart/quickstart-linux-utilities.git; do echo \"Retrying\"; done\n" +
+		"cd /quickstart-linux-utilities\n" +
+		"source quickstart-cfn-tools.source\n  " +
+		"qs_update-os || qs_err\n" +
+		"qs_bootstrap_pip || qs_err\n" +
+		"qs_aws-cfn-bootstrap || qs_err\n  " +
+		"mkdir -p /opt/aws/bin\n" +
+		"ln -s /usr/local/bin/cfn-* /opt/aws/bin/"
+
+	prop := awsec2.GenericLinuxImageProps{
+		UserData: awsec2.UserData_Custom(jsii.String(script)),
+	}
+	ec2ID := "CdkGoUbuntuEc2Stack"
+	image := awsec2.NewGenericLinuxImage(&imageMap,&prop)
+
+	instanceProp := awsec2.InstanceProps{
+		InstanceType: awsec2.NewInstanceType(jsii.String("X86_64")),
+		MachineImage:     image,
+		Vpc:              nil,
+		InstanceName:              jsii.String(ec2ID),
+		KeyName:                   nil,
+		PrivateIpAddress:          nil,
+		ResourceSignalTimeout:     nil,
+		Role:                      nil,
+		SecurityGroup:             nil,
+		UserData:                  prop.UserData,
+		UserDataCausesReplacement: nil,
+		VpcSubnets: &awsec2.SubnetSelection{
+			AvailabilityZones: nil,
+			OnePerAz:          nil,
+			SubnetFilters:     nil,
+			Subnets:           nil,
+			SubnetType:        "PUBLIC",
+		},
+	}
+	instance := awsec2.NewInstance(stack,&ec2ID,&instanceProp)
+
+	println(*instance.InstancePublicIp())
 
 	return stack
 }
