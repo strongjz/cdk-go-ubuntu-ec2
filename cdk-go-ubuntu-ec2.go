@@ -18,6 +18,53 @@ func NewCdkGoUbuntuEc2Stack(scope constructs.Construct, id string, props *CdkGoU
 	}
 	stack := awscdk.NewStack(scope, &id, &sprops)
 
+	subnetConfig := make([]*awsec2.SubnetConfiguration,6)
+
+	s1 := awsec2.SubnetConfiguration{
+		Name:       jsii.String("Public-1"),
+		SubnetType: awsec2.SubnetType_PUBLIC,
+		CidrMask:   jsii.Number(24),
+	}
+	s2 := awsec2.SubnetConfiguration{
+		Name:       jsii.String("Public-2"),
+		SubnetType: awsec2.SubnetType_PUBLIC,
+		CidrMask:   jsii.Number(24),
+	}
+	s3 := awsec2.SubnetConfiguration{
+		Name:       jsii.String("Public-3"),
+		SubnetType: awsec2.SubnetType_PUBLIC,
+		CidrMask:   jsii.Number(24),
+	}
+	s4 := awsec2.SubnetConfiguration{
+		Name:       jsii.String("Private-1"),
+		SubnetType: awsec2.SubnetType_PRIVATE,
+		CidrMask:   jsii.Number(24),
+	}
+	s5 := awsec2.SubnetConfiguration{
+		Name:       jsii.String("Private-2"),
+		SubnetType: awsec2.SubnetType_PRIVATE,
+		CidrMask:   jsii.Number(24),
+	}
+	s6 := awsec2.SubnetConfiguration{
+		Name:       jsii.String("Private-3"),
+		SubnetType: awsec2.SubnetType_PRIVATE,
+		CidrMask:   jsii.Number(24),
+	}
+
+	subnetConfig = append(subnetConfig,&s1,&s2,&s3,&s4,&s5,&s6)
+
+	var vpc = awsec2.NewVpc(stack,jsii.String("CdkGoUbuntuEc2Stack"), &awsec2.VpcProps{
+		Cidr:                   jsii.String("10.0.0.0/16"),
+		DefaultInstanceTenancy: awsec2.DefaultInstanceTenancy_DEFAULT,
+		EnableDnsHostnames:     jsii.Bool(true),
+		EnableDnsSupport:       jsii.Bool(true),
+		MaxAzs:                 jsii.Number(3),
+		NatGatewayProvider:     awsec2.NatProvider_Gateway(&awsec2.NatGatewayProps{}),
+		NatGateways:            jsii.Number(1),
+		SubnetConfiguration:    &subnetConfig,
+	})
+
+
 	imageMap := make(map[string]*string)
 
 	var ubuntu = "ami-019212a8baeffb0fa"
@@ -44,26 +91,16 @@ func NewCdkGoUbuntuEc2Stack(scope constructs.Construct, id string, props *CdkGoU
 	instanceProp := awsec2.InstanceProps{
 		InstanceType: awsec2.NewInstanceType(jsii.String("X86_64")),
 		MachineImage:     image,
-		Vpc:              nil,
+		Vpc:              vpc,
 		InstanceName:              jsii.String(ec2ID),
-		KeyName:                   nil,
-		PrivateIpAddress:          nil,
-		ResourceSignalTimeout:     nil,
-		Role:                      nil,
-		SecurityGroup:             nil,
 		UserData:                  prop.UserData,
-		UserDataCausesReplacement: nil,
 		VpcSubnets: &awsec2.SubnetSelection{
-			AvailabilityZones: nil,
-			OnePerAz:          nil,
-			SubnetFilters:     nil,
-			Subnets:           nil,
-			SubnetType:        "PUBLIC",
+			SubnetType:        awsec2.SubnetType_PUBLIC,
 		},
 	}
-	instance := awsec2.NewInstance(stack,&ec2ID,&instanceProp)
 
-	println(*instance.InstancePublicIp())
+	awsec2.NewInstance(stack,&ec2ID,&instanceProp)
+
 
 	return stack
 }
@@ -87,15 +124,14 @@ func env() *awscdk.Environment {
 	// Account/Region-dependent features and context lookups will not work, but a
 	// single synthesized template can be deployed anywhere.
 	//---------------------------------------------------------------------------
-	return nil
+	//return nil
 
 	// Uncomment if you know exactly what account and region you want to deploy
 	// the stack to. This is the recommendation for production stacks.
 	//---------------------------------------------------------------------------
-	// return &awscdk.Environment{
-	//  Account: jsii.String("123456789012"),
-	//  Region:  jsii.String("us-east-1"),
-	// }
+	return &awscdk.Environment{
+	  Region:  jsii.String("us-west-2"),
+	 }
 
 	// Uncomment to specialize this stack for the AWS Account and Region that are
 	// implied by the current CLI configuration. This is recommended for dev
